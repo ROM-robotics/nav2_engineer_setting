@@ -8,8 +8,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/Nav2ParamEditor.dir/src/main.cpp.o.d"
   "CMakeFiles/Nav2ParamEditor.dir/src/nav2_window.cpp.o"
   "CMakeFiles/Nav2ParamEditor.dir/src/nav2_window.cpp.o.d"
-  "CMakeFiles/Nav2ParamEditor.dir/src/yaml_handler.cpp.o"
-  "CMakeFiles/Nav2ParamEditor.dir/src/yaml_handler.cpp.o.d"
   "Nav2ParamEditor"
   "Nav2ParamEditor.pdb"
 )

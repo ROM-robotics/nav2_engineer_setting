@@ -1,192 +1,155 @@
 #include "nav2_window.h"
-#include <QPushButton>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QMenuBar>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QTextCursor>
+#include <QDockWidget>
 
-Nav2Window::Nav2Window(QWidget *parent) : QMainWindow(parent) {
-    QWidget *centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
-
-    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
-
-    // Scrollable area for buttons
-    QScrollArea *scrollArea = new QScrollArea(this);
-    QWidget *scrollWidget = new QWidget(this);
-    nodeButtonLayout = new QVBoxLayout(scrollWidget);
-    scrollWidget->setLayout(nodeButtonLayout);
-    scrollArea->setWidget(scrollWidget);
-    scrollArea->setWidgetResizable(true);
-
-    paramTreeWidget = new QTreeWidget(this);
-    paramTreeWidget->setColumnCount(2);
-    paramTreeWidget->setHeaderLabels({"Key", "Value"});
-
-    QPushButton *loadButton = new QPushButton("Load YAML", this);
-    QPushButton *saveButton = new QPushButton("Save YAML", this);
-
-    mainLayout->addWidget(scrollArea);
-    mainLayout->addWidget(paramTreeWidget);
-    mainLayout->addWidget(loadButton);
-    mainLayout->addWidget(saveButton);
-
-    yamlHandler = new YamlHandler("/home/mr_robot/Desktop/nav2_params.yaml");
-
-    connect(loadButton, &QPushButton::clicked, this, &Nav2Window::loadYaml);
-    connect(saveButton, &QPushButton::clicked, this, &Nav2Window::saveYaml);
-    connect(paramTreeWidget, &QTreeWidget::itemChanged, this, &Nav2Window::validateData);
-}
-
-void Nav2Window::loadYaml() {
-    // Clear UI elements
-    paramTreeWidget->clear();
-    while (QLayoutItem *item = nodeButtonLayout->takeAt(0)) {
-        delete item->widget();
-        delete item;
-    }
-
-    // Load YAML data
-    YAML::Node rootNode = yamlHandler->loadYaml();
-    yamlData.clear();
-
-    // Create buttons for each node
-    for (const auto &it : rootNode) {
-        QString nodeName = QString::fromStdString(it.first.as<std::string>());
-        yamlData[nodeName] = it.second;
-
-        QPushButton *nodeButton = new QPushButton(nodeName, this);
-        nodeButtonLayout->addWidget(nodeButton);
-
-        connect(nodeButton, &QPushButton::clicked, this, [this, nodeName]() {
-            showNodeParams(nodeName);
-        });
-    }
-}
-
-void Nav2Window::showNodeParams(const QString &nodeName) {
-    currentNode = nodeName;
-    paramTreeWidget->clear();
-
-    YAML::Node node = yamlData[nodeName];
-
-    // key to skip
-    static const QSet<QString> keysToSkip = {
-        "ros__parameters", "local_costmap", "global_costmap", "qos",
-        "GridBased", "simple_smoother", "spin", "backup", "wait",
-        "assistant_teleop", "wait_at_waypoint", "PolygonStop", "PolygonSlow",
-        "FootprintApproach", "scan", "pointcloud", "drive_on_heading", "assisted_teleop",
-        "navigate_to_pose", "navigate_through_poses", "plugin_lib_names", "progress_checker",
-        "general_goal_checker", "FollowPath", "obstacle_layer", "static_layer", "inflation_layer",
-        "voxel_layer", "static_layer", "simple_smoother", "wait_at_waypoint"
-    };
-
-    for (const auto &it : node) 
-    {
-        QString key = QString::fromStdString(it.first.as<std::string>());
-        QString value;
-        if (keysToSkip.contains(key)) 
-        {
-            // Skip this key
-            continue;
-        } 
-        else if (it.second.IsScalar()) 
-        {
-            value = QString::fromStdString(it.second.as<std::string>());
-        } 
-        else if (it.second.IsSequence()) 
-        {
-            value = "[";
-            for (const auto &seqItem : it.second) 
-            {
-                value += QString::fromStdString(seqItem.as<std::string>()) + ", ";
-            }
-            value.chop(2); // Remove last comma and space
-            value += "]";
-        } 
-        else if (it.second.IsMap()) 
-        {
-            value = "{";
-            for (const auto &mapItem : it.second) 
-            {
-                value += QString::fromStdString(mapItem.first.as<std::string>()) + ": " +
-                         QString::fromStdString(mapItem.second.as<std::string>()) + ", ";
-            }
-            value.chop(2); // Remove last comma and space
-            value += "}";
-        }
-        else 
-        {
-            value = "Unsupported type";
-        }
-        QTreeWidgetItem *item = new QTreeWidgetItem(paramTreeWidget);
-        item->setText(0, key);
-        item->setText(1, value);
-        item->setFlags(item->flags() | Qt::ItemIsEditable);
-    }
-}
-
-void Nav2Window::saveYaml() {
-    if (currentNode.isEmpty()) return;
-
-    YAML::Node updatedNode = buildYaml(currentNode);
-    yamlData[currentNode] = updatedNode;
-
-    YAML::Node finalYaml;
-    for (auto it = yamlData.begin(); it != yamlData.end(); ++it) {
-        finalYaml[it.key().toStdString()] = it.value();
-    }
-
-    yamlHandler->saveYaml(finalYaml);
-}
-
-YAML::Node Nav2Window::buildYaml(const QString &nodeName) {
-    YAML::Node node;
-    for (int i = 0; i < paramTreeWidget->topLevelItemCount(); ++i) {
-        QTreeWidgetItem *item = paramTreeWidget->topLevelItem(i);
-        QString key = item->text(0);
-        QString value = item->text(1);
-        node[key.toStdString()] = value.toStdString();
-    }
-    return node;
-}
-
-void Nav2Window::validateData(QTreeWidgetItem *item, int column) {
-    if (column != 1) return;
-
-    QString value = item->text(1);
-    if (value.isEmpty()) {
-        QMessageBox::warning(this, "Validation Error", "Value cannot be empty!");
-        item->setText(1, "0");
-    }
-}
-
-void Nav2Window::parseYaml(const YAML::Node &node, const QString &parentKey) {
-    static const QSet<QString> keysToSkip = {
-        "ros__parameters", "local_costmap", "global_costmap", "qos",
-        "GridBased", "simple_smoother", "spin", "backup", "wait",
-        "assistant_teleop", "wait_at_waypoint", "PolygonStop", "PolygonSlow",
-        "FootprintApproach", "scan", "pointcloud"
-    };
-
-    for (const auto &it : node) {
-        QString key = QString::fromStdString(it.first.as<std::string>());
-        
-        if (keysToSkip.contains(key)) {
-            // Dive into subkeys instead of treating this as a node
-            parseYaml(it.second, parentKey);
-        } else {
-            QString nodeName = parentKey.isEmpty() ? key : parentKey + "/" + key;
-            yamlData[nodeName] = it.second;
-
-            QPushButton *nodeButton = new QPushButton(nodeName, this);
-            nodeButtonLayout->addWidget(nodeButton);
-
-            connect(nodeButton, &QPushButton::clicked, this, [this, nodeName]() {
-                showNodeParams(nodeName);
-            });
-        }
-    }
-}
-
-Nav2Window::~Nav2Window()
+Nav2MainWindow::Nav2MainWindow(QWidget *parent)
+    : QMainWindow(parent), textEdit(new QTextEdit(this)), searchDockWidget(new QDockWidget(this))
 {
-    //delete ui;
+    setCentralWidget(textEdit);
+
+    createActions();
+    createMenu();
+    createSearchReplaceUI();
+}
+
+Nav2MainWindow::~Nav2MainWindow() {}
+
+void Nav2MainWindow::createActions()
+{
+    openAction = new QAction("Open", this);
+    connect(openAction, &QAction::triggered, this, &Nav2MainWindow::openFile);
+
+    saveAction = new QAction("Save", this);
+    connect(saveAction, &QAction::triggered, this, &Nav2MainWindow::saveFile);
+
+    newAction = new QAction("New", this);
+    connect(newAction, &QAction::triggered, this, &Nav2MainWindow::newFile);
+
+    searchAction = new QAction("Search", this);
+    connect(searchAction, &QAction::triggered, this, &Nav2MainWindow::searchText);
+
+    replaceAction = new QAction("Replace", this);
+    connect(replaceAction, &QAction::triggered, this, &Nav2MainWindow::replaceText);
+
+    searchNextAction = new QAction("Search Next", this);
+    connect(searchNextAction, &QAction::triggered, this, &Nav2MainWindow::searchNext);
+
+    replaceNextAction = new QAction("Replace Next", this);
+    connect(replaceNextAction, &QAction::triggered, this, &Nav2MainWindow::replaceNext);
+
+    searchPreviousAction = new QAction("Search Previous", this);
+    connect(searchPreviousAction, &QAction::triggered, this, &Nav2MainWindow::searchPrevious);
+
+    // Shortcuts for search and replace
+    searchAction->setShortcut(QKeySequence("Ctrl+F"));
+    replaceAction->setShortcut(QKeySequence("Ctrl+R"));
+    searchNextAction->setShortcut(QKeySequence("F3"));
+    replaceNextAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
+}
+
+void Nav2MainWindow::createMenu()
+{
+    QMenu *fileMenu = menuBar()->addMenu("&File");
+    fileMenu->addAction(newAction);
+    fileMenu->addAction(openAction);
+    fileMenu->addAction(saveAction);
+
+    QMenu *editMenu = menuBar()->addMenu("&Edit");
+    editMenu->addAction(searchAction);
+    editMenu->addAction(replaceAction);
+    editMenu->addAction(searchNextAction);
+    editMenu->addAction(replaceNextAction);
+    editMenu->addAction(searchPreviousAction);
+}
+
+void Nav2MainWindow::createSearchReplaceUI()
+{
+    // Create search and replace inputs in the dock widget
+    QWidget *searchWidget = new QWidget;
+    QVBoxLayout *layout = new QVBoxLayout(searchWidget);
+    searchLineEdit = new QLineEdit(this);
+    replaceLineEdit = new QLineEdit(this);
+    layout->addWidget(new QLabel("Search"));
+    layout->addWidget(searchLineEdit);
+    layout->addWidget(new QLabel("Replace"));
+    layout->addWidget(replaceLineEdit);
+
+    searchDockWidget->setWidget(searchWidget);
+    searchDockWidget->setWindowTitle("Search/Replace");
+
+    // Initially hide the dock widget
+    searchDockWidget->hide();
+    addDockWidget(Qt::TopDockWidgetArea, searchDockWidget);  // Dock it at the top of the window
+}
+
+void Nav2MainWindow::openFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Open File", "", "Text Files (*.txt);;All Files (*)");
+    if (!fileName.isEmpty()) {
+        QFile file(fileName);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            textEdit->setPlainText(in.readAll());
+            file.close();
+        } else {
+            QMessageBox::warning(this, "Error", "Could not open file");
+        }
+    }
+}
+
+void Nav2MainWindow::saveFile()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "Save File", "", "Text Files (*.txt);;All Files (*)");
+    if (!fileName.isEmpty()) {
+        QFile file(fileName);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << textEdit->toPlainText();
+            file.close();
+        } else {
+            QMessageBox::warning(this, "Error", "Could not save file");
+        }
+    }
+}
+
+void Nav2MainWindow::newFile()
+{
+    textEdit->clear();
+}
+
+void Nav2MainWindow::searchText()
+{
+    // Show the dock widget for search and replace
+    searchDockWidget->show();
+}
+
+void Nav2MainWindow::replaceText()
+{
+    // Show the dock widget for replace
+    searchDockWidget->show();
+}
+
+void Nav2MainWindow::searchNext()
+{
+    // Implement search next functionality here
+}
+
+void Nav2MainWindow::replaceNext()
+{
+    // Implement replace next functionality here
+}
+
+void Nav2MainWindow::searchPrevious()
+{
+    // Implement search previous functionality here
+}
+
+void Nav2MainWindow::highlightSearchResults(const QString &searchTerm)
+{
+    // Implement highlight functionality here
 }

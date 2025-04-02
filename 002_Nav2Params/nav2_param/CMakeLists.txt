@@ -24,13 +24,14 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS src)
 #qt5_wrap_ui(UI_HEADERS ${UI_FILES})
 
 #set(PROJECT_SOURCES ${UI_HEADERS})
+set(CMAKE_AUTOMOC ON)
 
 add_executable(Nav2ParamEditor
     src/main.cpp
-    src/nav2_window.cpp
     src/nav2_window.h
-    src/yaml_handler.h
-    src/yaml_handler.cpp
+    src/nav2_window.cpp
+    # src/yamlEditor.h
+    # src/yamlEditor.cpp
     #${UI_HEADERS}
 )
 target_link_libraries(Nav2ParamEditor ${Qt5Core_LIBRARIES} ${Qt5Widgets_LIBRARIES} yaml-cpp)

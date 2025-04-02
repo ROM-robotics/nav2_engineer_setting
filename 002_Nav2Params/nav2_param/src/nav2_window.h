@@ -2,42 +2,48 @@
 #define NAV2_WINDOW_H
 
 #include <QMainWindow>
-#include <QTableWidget>
-#include "yaml_handler.h"
+#include <QTextEdit>
+#include <QAction>
+#include <QLineEdit>
+#include <QDockWidget>
 
-#include <QTreeWidget>
-#include <QVBoxLayout>
-#include <QScrollArea>
-
-QT_BEGIN_NAMESPACE
-namespace Ui { class Nav2Window; }
-QT_END_NAMESPACE
-
-class Nav2Window : public QMainWindow {
+class Nav2MainWindow : public QMainWindow
+{
     Q_OBJECT
+
 public:
-    explicit Nav2Window(QWidget *parent = nullptr);
-    ~Nav2Window();
+    Nav2MainWindow(QWidget *parent = nullptr);
+    ~Nav2MainWindow();
+
 private slots:
-    void loadYaml();
-    void saveYaml();
-    void showNodeParams(const QString &nodeName);
-    void validateData(QTreeWidgetItem *item, int column);
+    void openFile();
+    void saveFile();
+    void newFile();
+    void searchText();
+    void replaceText();
+    void searchNext();
+    void replaceNext();
+    void searchPrevious();
 
 private:
-    void parseYaml(const YAML::Node &node, const QString &parentKey);
-    YAML::Node buildYaml(const QString &nodeName);
+    QTextEdit *textEdit;
+    QAction *openAction;
+    QAction *saveAction;
+    QAction *newAction;
+    QAction *searchAction;
+    QAction *replaceAction;
+    QAction *searchNextAction;
+    QAction *replaceNextAction;
+    QAction *searchPreviousAction;
 
-    QWidget *nodeButtonContainer;
-    QVBoxLayout *nodeButtonLayout;
-    QTreeWidget *paramTreeWidget;
-    QMap<QString, YAML::Node> yamlData;
-    YamlHandler *yamlHandler;
-    QString currentNode;
+    QDockWidget *searchDockWidget;  // Dock widget for search input
+    QLineEdit *searchLineEdit;
+    QLineEdit *replaceLineEdit;
 
-    QTableWidget *table;
-    //Ui::Nav2Window *ui;
+    void createActions();
+    void createMenu();
+    void createSearchReplaceUI();
+    void highlightSearchResults(const QString &searchTerm);
 };
 
 #endif // NAV2_WINDOW_H
-
