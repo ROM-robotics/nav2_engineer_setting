@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1400</width>
-    <height>1050</height>
+    <width>700</width>
+    <height>525</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,14 +18,14 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>1400</width>
-    <height>1050</height>
+    <width>700</width>
+    <height>525</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>1400</width>
-    <height>1050</height>
+    <width>700</width>
+    <height>525</height>
    </size>
   </property>
   <property name="font">
@@ -36,10 +36,10 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>ROM ROBOTICS</string>
+   <string>Setting Login</string>
   </property>
   <property name="windowIcon">
-   <iconset>
+   <iconset resource="src.qrc">
     <normaloff>:/images/main_dWS_icon.ico</normaloff>:/images/main_dWS_icon.ico</iconset>
   </property>
   <property name="styleSheet">
@@ -264,7 +264,7 @@ border-radius: 60px;
      <string/>
     </property>
     <property name="icon">
-     <iconset>
+     <iconset resource="src.qrc">
       <normaloff>:/images/primary_KMx_icon.ico</normaloff>:/images/primary_KMx_icon.ico</iconset>
     </property>
     <property name="iconSize">
@@ -302,7 +302,9 @@ border-radius: 60px;
    </widget>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="src.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>pushButton</sender>
